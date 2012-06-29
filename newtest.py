@@ -5,8 +5,6 @@ Last modified: 7 June 2012
 
 
 from numpy import *
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib
 from matplotlib import cm
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
@@ -41,46 +39,56 @@ def update(u,I):
     return u
 
 
+def hebbPI():
+    w=zeros((n,n))
+    for i in range(n):
+        r=array([gauss_pbc(i*dx,sig)])
+        r2=array([gauss_pbc(((i+5)%n)*dx,sig)])
+        w=w+dot(r.transpose(),r2)
+    return w/n
+
+
 if __name__ == "__main__":
     #Initialize weights
     w=1000*(hebb()-0.095)
-    
     #Initialize dnf state-history list    
     xall=[]
-    
-    #Provide input at pi/2 for 50 steps
-    I=gauss_pbc(pi/2,sig)
-    for t in arange(50):
-        u=update(u,I)
-        x=0.5*(tanh(0.1*u)+1)
-        xall=xall+[x]
+ 
 
-    #Wait till it stabilizes for 50 steps
     I=zeros(n)
-    for t in arange(50):
+    for t in arange(20):
         u=update(u,I)
         x=0.5*(tanh(0.1*u)+1)
-        xall=xall+[x]
-    
-#    #Provide new input at 3pi/2 for 90 steps to overcome 
-#    #the belief of the previous state
-#    I=gauss_pbc(3 * pi / 2,sig)
-#    for t in arange(90):
+        xall=xall+[x]   
+    #Provide input at pi/2 for 50 steps
+#    I=gauss_pbc(pi/2,sig)
+#    for t in arange(100):
 #        u=update(u,I)
 #        x=0.5*(tanh(0.1*u)+1)
 #        xall=xall+[x]
-
-    #Wait till it stabilizes for 50 steps
-    I=zeros(n)
-    for t in arange(200):
-        u=update(u,I)
-        x=0.5*(tanh(0.1*u)+1)
-        xall=xall+[x]
+#
+#    #Wait till it stabilizes for 50 steps
+#
+#    
+##    #Provide new input at 3pi/2 for 90 steps to overcome 
+##    #the belief of the previous state
+##    I=gauss_pbc(3 * pi / 2,sig)
+##    for t in arange(90):
+##        u=update(u,I)
+##        x=0.5*(tanh(0.1*u)+1)
+##        xall=xall+[x]
+#
+#    #Wait till it stabilizes for 50 steps
+#    I=zeros(n)
+#    for t in arange(200):
+#        u=update(u,I)
+#        x=0.5*(tanh(0.1*u)+1)
+#        xall=xall+[x]
         
     #Create a figure for the 3d plot
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    X, Y = meshgrid(arange(n), arange(300))
+    X, Y = meshgrid(arange(n), arange(350))
     surf = ax.plot_surface(X, Y, asarray(xall), cmap=cm.jet,
         linewidth=0, antialiased=True)
     ax.w_zaxis.set_major_locator(LinearLocator(10))
@@ -89,11 +97,8 @@ if __name__ == "__main__":
     ax.set_xlabel("Node")
     ax.set_ylabel("Time")
     fig.colorbar(surf, shrink=0.5, aspect=5)
-    plt.figure()
     
-    #Create a weight image in a new figure
-    h = plt.imshow(w)
-    plt.show()
+
     
     
     

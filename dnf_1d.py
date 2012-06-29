@@ -29,7 +29,6 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 class dnf:
     ######### Simulation variables ############
-    
     n=100               #Number of nodes per side
     tau=0.1             #Tau
     I=zeros((n,1))      #Input activity
@@ -56,18 +55,22 @@ class dnf:
     
     
     
-    def __init__(self):
+    def __init__(self,multi=False):
         self.t = 0
         self.gauss = dnf.gauss_pbc(pi,self.sig)
         self.u=zeros((dnf.n,1))      #The neural field state at a specific time
-#        self.z = (1000*(self.hebbPI()-0.095) * 0.7 + 1000*(self.hebb()-0.095))/2
-        self.z = 1000*(self.hebb()-0.095)
-        self.diffgauss = dnf.gauss_pbc(pi/2,0.2) - dnf.gauss_pbc(pi/2,dnf.sig)
+        
+        if multi:        
+            self.z = 1000*(self.hebbMulti()-0.095)
+        else:
+            self.z = 1000*(self.hebb()-0.095)
+            self.zpi1 = 1000*(self.hebbPI1()-0.095)
+            self.zpi2 = 1000*(self.hebbPI2()-0.095)
         self.xall=[]
     
         
     
-    def hebbPI(self):
+    def hebbPI1(self):
         w=zeros((self.n,self.n))
         for i in range(self.n):
             r=dnf.gauss_pbc(i*self.dx,self.sig)
@@ -75,6 +78,13 @@ class dnf:
             w=w+dot(r,r2.transpose())
         return w/self.n
     
+    def hebbPI2(self):
+        w=zeros((self.n,self.n))
+        for i in range(self.n):
+            r=dnf.gauss_pbc(i*self.dx,self.sig)
+            r2=dnf.gauss_pbc((i-5)%self.n*self.dx,self.sig)
+            w=w+dot(r,r2.transpose())
+        return w/self.n
     
     #Uses hebbian learning to produce a single n*n array of the relation between
     # two gaussians. It yields the weights between the middle node and all the
@@ -86,8 +96,9 @@ class dnf:
             w=w+dot(r,r.transpose())
         return w/self.n
     
+    
     def hebbMulti(self):
-        w=zeros((self.n,self.n))
+        w=zeros((self.n,self.n))   
         for i in range(self.n):
             r=dnf.gauss_pbc(i*self.dx,0.2) - dnf.gauss_pbc(i*self.dx,dnf.sig)
             w=w+dot(r,r.transpose())
@@ -97,12 +108,17 @@ class dnf:
     #Takes a dynamic field state along with an activity input and the weight
     # from hebb. It updates the dynamic neural field and returns it after one
     # step in time. 
-    def update(self,I):
+    def update(self,I, v):
         self.t += 1
+        if v < 0:
+            zpi = self.zpi2
+        else:
+            zpi = self.zpi1
         r=0.5*(tanh(0.1*self.u)+1)
-        self.u=self.u+ self.tau*((-self.u)+dot(self.z,r)*self.dx+I)
+        z = (self.z + abs(v)*zpi)/(abs(v)+1)
+        self.u=self.u+ self.tau*(-self.u+dot(z,r)*self.dx+I)
         x=0.5*(tanh(0.1*self.u)+1)
-        self.xall = self.xall + [list(self.u.reshape(-1,))]
+        self.xall = self.xall + [list(x.reshape(-1,))]
     
     #Takes a dnf state and draws it in 3dwith respect to time.
     def plot(self):
@@ -124,21 +140,23 @@ class dnf:
 
 
 
-
     
 #Test case for the module
 if __name__ == "__main__":
     dnfex = dnf()
-    
+  
+
+
+  
     #Provide input at pi/2 for 50 steps
-    I=dnf.gauss_pbc(pi/2,dnf.sig)
-    for t in arange(100):
-       dnfex.update(I)
+    I=dnf.gauss_pbc(pi,dnf.sig)
+    for t in arange(300):
+       dnfex.update(I,-1)
        
        
     I=zeros((dnf.n,1))
-    for I in arange(100):
-        dnfex.update(I)
+    for i in range(200):
+        dnfex.update(I,-1)
 
         
 
