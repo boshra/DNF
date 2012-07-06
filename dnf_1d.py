@@ -31,12 +31,14 @@ class dnf:
     
     ######### Simulation variables ############
 
-    n=100              #Number of nodes per side
+    n=100               #Number of nodes per side
     tau=0.1             #Tau
     I=zeros((n,1))      #Input activity
     dx=2*pi/n           #Length per node in the x dimension
     sig=2*pi/10*0.6     #Sigma of the gaussian function    
-    c= 0.03        #Global inhibition
+    c= 0.095            #Global inhibition
+    nrate = 0.3       
+    
     ###########################################
     
     #Takes a location between 0 and 2pi for both x along with the sigma
@@ -71,7 +73,8 @@ class dnf:
         self.t = 0
         self.gauss = dnf.gauss_pbc(pi,self.sig)
         self.u=zeros((dnf.n,1))      #The neural field state at a specific time
-        if multi: 
+        if multi:
+            self.c = 0.03
             self.z = 1000*(self.hebbMulti()-self.c)
         else:
             self.z = 1000*(self.hebb()-self.c)
@@ -85,20 +88,22 @@ class dnf:
     # to the right
     def hebbPI1(self):
         w=zeros((self.n,self.n))
+        rbar = dnf.gauss_pbc(0,self.sig)
         for i in range(self.n):
             r=dnf.gauss_pbc(i*self.dx,self.sig)
-            r2=dnf.gauss_pbc((i+5)%self.n*self.dx,self.sig)
-            w=w+dot(r,r2.transpose())
+            w=w+dot(r,rbar.transpose())
+            rbar= (1-self.nrate)*rbar+ self.nrate*r
         return w/self.n
     
     #Produces the weight array that is responsible for integrating motion
     # to the left
     def hebbPI2(self):
         w=zeros((self.n,self.n))
+        rbar = dnf.gauss_pbc(0,self.sig)
         for i in range(self.n):
-            r=dnf.gauss_pbc(i*self.dx,self.sig)
-            r2=dnf.gauss_pbc((i-5)%self.n*self.dx,self.sig)
-            w=w+dot(r,r2.transpose())
+            r=dnf.gauss_pbc((self.n-i)*self.dx,self.sig)
+            w=w+dot(r,rbar.transpose())
+            rbar= (1-self.nrate)*rbar+ self.nrate*r
         return w/self.n
     
     #Uses hebbian learning to produce a single n*n array of the relation between
@@ -125,7 +130,7 @@ class dnf:
     # step in time. 
     def update(self,I, v=0):
         self.t += 1
-        if v >= 0:
+        if v <= 0:
             zpi = self.zpi2
         else:
             zpi = self.zpi1
@@ -169,16 +174,16 @@ if __name__ == "__main__":
   
     #Provide input at pi/2 for 50 steps
     I=dnf.gauss_pbc(pi,dnf.sig/10)
-    for i in range(20):
+    for i in range(200):
        dnfex.update(I)
        
        
     I=zeros((dnf.n,1))
-    for i in range(20):
+    for i in range(200):
         dnfex.update(I)   
         
     I=dnf.gauss_pbc(2*pi/3,dnf.sig/10)
-    for i in range(30):
+    for i in range(300):
        dnfex.update(I)   
 
     I=zeros((dnf.n,1))
@@ -187,7 +192,7 @@ if __name__ == "__main__":
         
         
     I=dnf.gauss_pbc(2*pi,dnf.sig/20)
-    for i in range(20):
+    for i in range(200):
        dnfex.update(I)  
 
     I=zeros((dnf.n,1))
