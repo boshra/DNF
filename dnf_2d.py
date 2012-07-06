@@ -2,7 +2,7 @@
 ##                                                      ##
 ## Module: dnf_2d.py                                    ##
 ##                                                      ##
-## Version: 0.1                                         ##
+## Version: 0.2                                         ##
 ##                                                      ##
 ## Description: A running simulation of a dynamic       ##
 ##  neural field with several modifications for         ##
@@ -22,13 +22,14 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 class dnf:
     ######### Simulation variables ############
     
-    n=100               #Number of nodes per side
+    n=50               #Number of nodes per side
     tau=0.1             #Tau
     u=zeros((n,n))      #The neural field state at a specific time
     I=zeros((n,n))      #Input activity
     dx=2*pi/n           #Length per node in the x dimension
     dy=2*pi/n           #Length per node in the y dimension
     sig=2*pi/11*0.6     #Sigma of the gaussian function
+    c = 0.095           #Global inhibition
     X, Y = meshgrid(
         arange(n),
         arange(n))      #A grid for plotting purposes
@@ -52,7 +53,11 @@ class dnf:
     
     def __init__(self):
         self.gauss = dnf.gauss_pbc(pi,pi,self.sig)
-        self.z = 1000*(self.hebb()-0.095)
+        self.z = 1000*(self.hebb()-self.c)
+        self.zxn = 1000*(self.hebb_PI_X_neg()-self.c)
+        self.zxp = 1000*(self.hebb_PI_X_pos()-self.c)
+        self.zyn = 1000*(self.hebb_PI_Y_neg()-self.c)
+        self.zyp = 1000*(self.hebb_PI_Y_pos()-self.c)
         
     
     
@@ -63,6 +68,23 @@ class dnf:
     # others.
     def hebb(self):
         z = convolve2d(self.gauss, self.gauss, 'same', 'wrap')
+        return z/(self.n*2)
+    
+    
+    def hebb_PI_X_neg(self):
+        z = convolve2d(self.gauss, roll(self.gauss,-1,axis=1),"same","wrap")
+        return z/(self.n*2)
+        
+    def hebb_PI_X_pos(self):
+        z = convolve2d(self.gauss, roll(self.gauss,1,axis=1),"same","wrap")
+        return z/(self.n*2)
+        
+    def hebb_PI_Y_neg(self):
+        z = convolve2d(self.gauss, roll(self.gauss,-1,axis=0),"same","wrap")
+        return z/(self.n*2)
+
+    def hebb_PI_Y_pos(self):
+        z = convolve2d(self.gauss, roll(self.gauss,1,axis=0),"same","wrap")
         return z/(self.n*2)
     
     #Takes a dynamic field state along with an activity input and the weight
@@ -96,6 +118,7 @@ if __name__ == "__main__":
     #Provide input at pi/2 for 50 steps
     I=dnf.gauss_pbc(3*pi/2,3*pi/2,dnf.sig)
     for t in arange(50):
+
        dnfex.update(I)
 
     dnfex.plot()
